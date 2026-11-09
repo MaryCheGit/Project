@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Каталог книг — КиноКнигоТЕКА</title>
+    <link rel="stylesheet" href="/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+</head>
+<body class="bg-books">
+
+    <header class="header">
+        <div class="container header-content">
+            <a href="/" class="logo">
+                <div class="logo-left">
+                    <span class="logo-knigo">Книго</span>
+                    <span class="logo-kino">Кино</span>
+                </div>
+                <span class="logo-teka">ТЕКА</span>
+            </a>
+            <nav class="nav">
+                <a href="/books.html" class="nav-link nav-link--accent">Книги</a>
+                <a href="/movies.html" class="nav-link">Фильмы</a>
+                <a href="/admin.html" class="nav-link nav-link--accent hidden">Админ-панель</a>
+                <a href="/login.html" class="nav-link hidden" id="loginBtn">Войти</a>
+                <a href="/profile.html" class="nav-link nav-link--accent hidden" id="profileBtn">Личный кабинет</a>
+                <a href="#" class="nav-link nav-link--logout hidden" id="logoutBtn">Выйти</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <h1 class="page-title">📖 Каталог книг</h1>
+
+        <div class="filters">
+            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Поиск по названию или автору...">
+            <select id="categoryFilter" class="filter-select">
+                <option value="">Все категории</option>
+            </select>
+        </div>
+
+        <div id="booksContainer" class="cards-grid">
+            <div class="loading" style="color: white;">Загрузка книг...</div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 КиноКнигоТЕКА. Дипломный проект.</p>
+        </div>
+    </footer>
+
+    <script src="/app.js"></script>
+    <script>
+        let allBooks = [];
+        let allCategories = [];
+
+        async function loadData() {
+            try {
+                const [books, categories] = await Promise.all([
+                    apiGet('/books'),
+                    apiGet('/categories')
+                ]);
+
+                allBooks = books || [];
+                allCategories = categories || [];
+
+                renderCategories();
+                renderBooks();
+
+            } catch (error) {
+                document.getElementById('booksContainer').innerHTML =
+                    '<div class="empty-state"><p>Ошибка загрузки книг</p></div>';
+            }
+        }
+
+        function renderCategories() {
+            const select = document.getElementById('categoryFilter');
+            allCategories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                option.textContent = cat.name;
+                select.appendChild(option);
+            });
+        }
+
+        function renderBooks() {
+            const container = document.getElementById('booksContainer');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const categoryId = document.getElementById('categoryFilter').value;
+
+            let filtered = allBooks;
+
+            if (categoryId) {
+                filtered = filtered.filter(b => b.category && b.category.id == categoryId);
+            }
+
+            if (search) {
+                filtered = filtered.filter(b =>
+                    b.title.toLowerCase().includes(search) ||
+                    (b.author && b.author.toLowerCase().includes(search))
+                );
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <div class="empty-state-icon">🔍</div>
+                        <h3 class="empty-state-title">Книги не найдены</h3>
+                        <p>Попробуйте изменить фильтры</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(book => {
+                const cover = book.coverUrl
+                    ? '<img src="' + book.coverUrl + '" alt="' + book.title + '" onerror="imgFallback(this, \'📖\')">'
+                    : '📖';
+
+                return `
+                    <a href="/book-detail.html?id=${book.id}" class="card fade-in">
+                        <div class="card-image" style="${book.coverUrl ? 'padding: 0;' : ''}">${cover}</div>
+                        <div class="card-body">
+                            <h3 class="card-title">${book.title}</h3>
+                            <p class="card-subtitle">${book.author || ''}${book.year ? ', ' + book.year : ''}</p>
+                            <div class="card-rating">
+                                <span>${renderStars(book.averageRating)}</span>
+                                <span class="card-rating-count">
+                                    ${(book.averageRating || 0).toFixed(1)} (${book.ratingCount || 0})
+                                </span>
+                            </div>
+                        </div>
+                    </a>
+                `;
+            }).join('');
+        }
+
+        document.getElementById('searchInput').addEventListener('input', renderBooks);
+        document.getElementById('categoryFilter').addEventListener('change', renderBooks);
+
+        document.addEventListener('DOMContentLoaded', loadData);
+    </script>
+</body>
+</html>

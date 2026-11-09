@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Книга — Читальня</title>
+    <link rel="stylesheet" href="/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .detail-layout {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 40px;
+            margin: 40px 0;
+        }
+        .detail-main {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 32px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 32px;
+            border-radius: 20px;
+        }
+        .detail-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+        .sidebar-block {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+        .sidebar-card {
+            display: flex;
+            gap: 12px;
+            padding: 10px;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+            cursor: pointer;
+            margin-bottom: 8px;
+        }
+        .sidebar-card:hover { background: var(--color-primary-light); }
+        .sidebar-card-image {
+            width: 60px;
+            height: 90px;
+            border-radius: 6px;
+            overflow: hidden;
+            background: linear-gradient(135deg, var(--color-primary-light), #f3f4f6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+        .sidebar-card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .sidebar-card-body { flex: 1; min-width: 0; }
+        .sidebar-card-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+        .sidebar-card-subtitle {
+            font-size: 12px;
+            color: var(--color-text-secondary);
+            margin-bottom: 4px;
+        }
+        .sidebar-card-rating {
+            font-size: 12px;
+            color: var(--color-star);
+            font-weight: 600;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .download-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        @media (max-width: 1024px) {
+            .detail-layout { grid-template-columns: 1fr; }
+            .detail-main { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body class="bg-books">
+
+    <header class="header">
+        <div class="container header-content">
+            <a href="/" class="logo">
+                <span class="logo-kino">Кино</span>
+                <span class="logo-knigo">Книго</span>
+                <span class="logo-teka">ТЕКА</span>
+            </a>
+            <nav class="nav">
+                <a href="/books.html" class="nav-link">Книги</a>
+                <a href="/movies.html" class="nav-link">Фильмы</a>
+                <a href="/admin.html" class="nav-link nav-link--accent hidden">Админ-панель</a>
+                <a href="/login.html" class="nav-link hidden" id="loginBtn">Войти</a>
+                <a href="/profile.html" class="nav-link nav-link--accent hidden" id="profileBtn">Личный кабинет</a>
+                <a href="#" class="nav-link nav-link--logout hidden" id="logoutBtn">Выйти</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <div id="bookContainer">
+            <div class="loading" style="color: white;">Загрузка книги...</div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 Читальня и Фильмотека. Дипломный проект.</p>
+        </div>
+    </footer>
+
+    <script src="/app.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const bookId = urlParams.get('id');
+
+        async function loadBook() {
+            if (!bookId) {
+                window.location.href = '/books.html';
+                return;
+            }
+
+            try {
+                const book = await apiGet('/books/' + bookId);
+
+                let inLibrary = false;
+                let libraryEntryId = null;
+
+                if (isAuthenticated()) {
+                    try {
+                        const user = getCurrentUser();
+                        inLibrary = await apiGet('/library/check?userId=' + user.userId + '&bookId=' + bookId);
+                        if (inLibrary) {
+                            const entries = await apiGet('/library/user/' + user.userId);
+                            const entry = entries.find(e => e.book && e.book.id == bookId);
+                            if (entry) libraryEntryId = entry.id;
+                        }
+                    } catch (e) {}
+                }
+
+                const movies = await apiGet('/movies/book/' + bookId);
+                const recommended = await apiGet('/books/' + bookId + '/recommendations');
+
+                renderBook(book, inLibrary, libraryEntryId, movies, recommended);
+
+            } catch (error) {
+                document.getElementById('bookContainer').innerHTML =
+                    '<div class="empty-state"><p>Книга не найдена</p></div>';
+            }
+        }
+
+        function renderBook(book, inLibrary, libraryEntryId, movies, recommended) {
+            const container = document.getElementById('bookContainer');
+
+            const buttonHTML = inLibrary
+                ? '<button class="form-btn" id="libraryBtn" style="width: auto; padding: 12px 24px; background: #10b981;" onclick="removeFromLibrary(' + libraryEntryId + ', \'book\', ' + book.id + ')">✅ В библиотеке</button>'
+                : '<button class="form-btn" id="libraryBtn" style="width: auto; padding: 12px 24px;" onclick="addToLibraryAndUpdate(\'book\', ' + book.id + ')">📚 Добавить в библиотеку</button>';
+
+            const coverHTML = book.coverUrl
+                ? '<img src="' + book.coverUrl + '" alt="' + book.title + '" class="detail-image" onerror="imgFallback(this, \'📖\')">'
+                : '📖';
+
+            const downloadedPDF = localStorage.getItem('downloaded_book_' + book.id + '_PDF');
+            const downloadedEPUB = localStorage.getItem('downloaded_book_' + book.id + '_EPUB');
+
+            const downloadHTML = `
+                <div class="download-group">
+                    <button class="form-btn" id="downloadBtn_PDF" style="width: auto; padding: 10px 20px; background: ${downloadedPDF ? '#10b981' : '#6366f1'};" onclick="downloadFile('PDF', ${book.id}, 'book')" ${downloadedPDF ? 'disabled' : ''}>
+                        ${downloadedPDF ? '✅ PDF СКАЧАНО' : '📥 Скачать PDF'}
+                    </button>
+                    <button class="form-btn" id="downloadBtn_EPUB" style="width: auto; padding: 10px 20px; background: ${downloadedEPUB ? '#10b981' : '#8b5cf6'};" onclick="downloadFile('EPUB', ${book.id}, 'book')" ${downloadedEPUB ? 'disabled' : ''}>
+                        ${downloadedEPUB ? '✅ EPUB СКАЧАНО' : '📥 Скачать EPUB'}
+                    </button>
+                </div>
+            `;
+
+            const readOnlineHTML = book.readOnlineUrl
+                ? `<a href="${book.readOnlineUrl}" target="_blank" class="form-btn" style="display: inline-block; width: auto; padding: 12px 24px; background: #f59e0b; text-align: center;">📖 Читать онлайн</a>`
+                : '';
+
+            container.innerHTML = `
+                <div class="detail-layout">
+                    <div class="detail-main">
+                        <div style="background: linear-gradient(135deg, #eef2ff, #f3f4f6); border-radius: 20px; aspect-ratio: 2 / 3; display: flex; align-items: center; justify-content: center; font-size: 100px; overflow: hidden;">
+                            ${coverHTML}
+                        </div>
+                        <div>
+                            <h1 style="font-size: 32px; font-weight: 800; margin-bottom: 12px;">${book.title}</h1>
+                            <p style="font-size: 16px; color: var(--color-text-secondary); margin-bottom: 20px;">
+                                ${book.author || ''}${book.year ? ', ' + book.year : ''}
+                            </p>
+
+                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+                                <span style="font-size: 22px; color: var(--color-star);">${renderStars(book.averageRating)}</span>
+                                <span style="font-size: 20px; font-weight: 700;">${(book.averageRating || 0).toFixed(1)}</span>
+                                <a href="/ratings.html?type=book&id=${book.id}" style="color: var(--color-primary); text-decoration: underline;">
+                                    (${book.ratingCount || 0} ${declOfNum(book.ratingCount || 0, ['оценка', 'оценки', 'оценок'])})
+                                </a>
+                            </div>
+
+                            <p style="margin-bottom: 24px; line-height: 1.7;">${book.description || ''}</p>
+
+                            <div class="action-buttons">
+                                ${buttonHTML}
+                                <button class="form-btn" style="width: auto; padding: 12px 24px; background: var(--color-accent);" onclick="rateItem('book', ${book.id})">
+                                    ⭐ Поставить оценку
+                                </button>
+                            </div>
+
+                            ${downloadHTML}
+                            ${readOnlineHTML}
+
+                            ${book.publisher ? `<p style="margin-top: 24px; color: var(--color-text-secondary); font-size: 14px;"><b>Издательство:</b> ${book.publisher}</p>` : ''}
+                            ${book.pages ? `<p style="color: var(--color-text-secondary); font-size: 14px;"><b>Страниц:</b> ${book.pages}</p>` : ''}
+                        </div>
+                    </div>
+
+                    <div class="detail-sidebar">
+                        ${movies && movies.length > 0 ? `
+                            <div class="sidebar-block">
+                                <h3 class="sidebar-title">🎬 Экранизации</h3>
+                                ${movies.map(m => {
+                                    const poster = m.posterUrl
+                                        ? '<img src="' + m.posterUrl + '" alt="' + m.title + '" onerror="imgFallback(this, \'🎬\')">'
+                                        : '🎬';
+                                    return `
+                                        <a href="/movie-detail.html?id=${m.id}" class="sidebar-card">
+                                            <div class="sidebar-card-image">${poster}</div>
+                                            <div class="sidebar-card-body">
+                                                <div class="sidebar-card-title">${m.title}</div>
+                                                <div class="sidebar-card-subtitle">${m.director || ''}${m.year ? ', ' + m.year : ''}</div>
+                                                <div class="sidebar-card-rating">${renderStars(m.averageRating)} ${(m.averageRating || 0).toFixed(1)}</div>
+                                            </div>
+                                        </a>
+                                    `;
+                                }).join('')}
+                            </div>
+                        ` : ''}
+
+                        ${recommended && recommended.length > 0 ? `
+                            <div class="sidebar-block">
+                                <h3 class="sidebar-title">📖 Рекомендуемые книги</h3>
+                                ${recommended.map(b => {
+                                    const cover = b.coverUrl
+                                        ? '<img src="' + b.coverUrl + '" alt="' + b.title + '" onerror="imgFallback(this, \'📖\')">'
+                                        : '📖';
+                                    return `
+                                        <a href="/book-detail.html?id=${b.id}" class="sidebar-card">
+                                            <div class="sidebar-card-image">${cover}</div>
+                                            <div class="sidebar-card-body">
+                                                <div class="sidebar-card-title">${b.title}</div>
+                                                <div class="sidebar-card-subtitle">${b.author || ''}</div>
+                                                <div class="sidebar-card-rating">${renderStars(b.averageRating)} ${(b.averageRating || 0).toFixed(1)}</div>
+                                            </div>
+                                        </a>
+                                    `;
+                                }).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        document.addEventListener('DOMContentLoaded', loadBook);
+    </script>
+</body>
+</html>

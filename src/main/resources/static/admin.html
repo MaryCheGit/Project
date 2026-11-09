@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель — КиноКнигоТЕКА</title>
+    <link rel="stylesheet" href="/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+</head>
+<body class="bg-profile">
+
+    <header class="header">
+        <div class="container header-content">
+            <a href="/" class="logo">
+                <div class="logo-left">
+                    <span class="logo-knigo">Книго</span>
+                    <span class="logo-kino">Кино</span>
+                </div>
+                <span class="logo-teka">ТЕКА</span>
+            </a>
+            <nav class="nav">
+                <a href="/books.html" class="nav-link">Книги</a>
+                <a href="/movies.html" class="nav-link">Фильмы</a>
+                <a href="/admin.html" class="nav-link nav-link--accent">Админ-панель</a>
+                <a href="/profile.html" class="nav-link">Личный кабинет</a>
+                <a href="#" class="nav-link nav-link--logout" id="logoutBtn">Выйти</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <h1 class="page-title">⚙️ Админ-панель</h1>
+
+        <div class="profile-tabs">
+            <button class="profile-tab active" data-tab="book">📖 Добавить книгу</button>
+            <button class="profile-tab" data-tab="movie">🎬 Добавить фильм</button>
+        </div>
+
+        <!-- Форма добавления книги -->
+        <div id="bookForm" class="auth-card" style="max-width: 700px; margin: 0 auto;">
+            <h2 style="margin-bottom: 24px;">📖 Новая книга</h2>
+
+            <div id="bookError" class="form-error hidden"></div>
+
+            <div class="form-group">
+                <label class="form-label">Название *</label>
+                <input type="text" id="bookTitle" class="form-input" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Автор *</label>
+                <input type="text" id="bookAuthor" class="form-input" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Описание</label>
+                <textarea id="bookDescription" class="form-input" rows="3"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Категория *</label>
+                <select id="bookCategory" class="form-input" required>
+                    <option value="">Выберите категорию</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Ссылка на обложку</label>
+                <input type="text" id="bookCover" class="form-input" placeholder="/uploads/books/example.jpg">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Ссылка на скачивание (PDF)</label>
+                <input type="text" id="bookDownload" class="form-input" placeholder="/files/book.pdf">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Ссылка на онлайн-чтение</label>
+                <input type="text" id="bookReadOnline" class="form-input" placeholder="/files/book.pdf">
+            </div>
+
+            <button class="form-btn" onclick="createBook()">Добавить книгу</button>
+        </div>
+
+        <!-- Форма добавления фильма -->
+        <div id="movieForm" class="auth-card hidden" style="max-width: 700px; margin: 0 auto;">
+            <h2 style="margin-bottom: 24px;">🎬 Новый фильм</h2>
+
+            <div id="movieError" class="form-error hidden"></div>
+
+            <div class="form-group">
+                <label class="form-label">Название *</label>
+                <input type="text" id="movieTitle" class="form-input" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Режиссёр *</label>
+                <input type="text" id="movieDirector" class="form-input" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Год</label>
+                <input type="number" id="movieYear" class="form-input">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Описание</label>
+                <textarea id="movieDescription" class="form-input" rows="3"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Книга-первоисточник</label>
+                <select id="movieBook" class="form-input">
+                    <option value="">Не указано</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Ссылка на постер</label>
+                <input type="text" id="moviePoster" class="form-input" placeholder="/uploads/movies/example.jpg">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Ссылка на скачивание (MP4)</label>
+                <input type="text" id="movieDownload" class="form-input" placeholder="/files/movie.mp4">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Ссылка на онлайн-просмотр (YouTube embed)</label>
+                <input type="text" id="movieWatchOnline" class="form-input" placeholder="https://www.youtube.com/embed/...">
+            </div>
+
+            <button class="form-btn" onclick="createMovie()">Добавить фильм</button>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 КиноКнигоТЕКА. Дипломный проект.</p>
+        </div>
+    </footer>
+
+    <script src="/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!isAuthenticated()) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            const user = getCurrentUser();
+            if (!user || user.role !== 'ADMIN') {
+                alert('Доступ запрещён. Только для администраторов.');
+                window.location.href = '/';
+                return;
+            }
+
+            try {
+                const categories = await apiGet('/categories');
+                const select = document.getElementById('bookCategory');
+                categories.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.name;
+                    select.appendChild(opt);
+                });
+            } catch (e) {}
+
+            try {
+                const books = await apiGet('/books');
+                const select = document.getElementById('movieBook');
+                books.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b.id;
+                    opt.textContent = b.title;
+                    select.appendChild(opt);
+                });
+            } catch (e) {}
+        });
+
+        document.querySelectorAll('.profile-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                const type = tab.dataset.tab;
+                document.getElementById('bookForm').classList.toggle('hidden', type !== 'book');
+                document.getElementById('movieForm').classList.toggle('hidden', type !== 'movie');
+            });
+        });
+
+        async function createBook() {
+            const errorBox = document.getElementById('bookError');
+            errorBox.classList.add('hidden');
+
+            const body = {
+                title: document.getElementById('bookTitle').value,
+                author: document.getElementById('bookAuthor').value,
+                description: document.getElementById('bookDescription').value,
+                coverUrl: document.getElementById('bookCover').value || null,
+                downloadUrl: document.getElementById('bookDownload').value || null,
+                readOnlineUrl: document.getElementById('bookReadOnline').value || null,
+                category: { id: document.getElementById('bookCategory').value }
+            };
+
+            if (!body.title || !body.author || !body.category.id) {
+                errorBox.textContent = 'Заполните обязательные поля';
+                errorBox.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                await apiPost('/books', body);
+                showToast('✅ Книга добавлена!', 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            } catch (error) {
+                errorBox.textContent = 'Ошибка: ' + error.message;
+                errorBox.classList.remove('hidden');
+            }
+        }
+
+        async function createMovie() {
+            const errorBox = document.getElementById('movieError');
+            errorBox.classList.add('hidden');
+
+            const body = {
+                title: document.getElementById('movieTitle').value,
+                director: document.getElementById('movieDirector').value,
+                year: parseInt(document.getElementById('movieYear').value) || null,
+                description: document.getElementById('movieDescription').value,
+                posterUrl: document.getElementById('moviePoster').value || null,
+                downloadUrl: document.getElementById('movieDownload').value || null,
+                watchOnlineUrl: document.getElementById('movieWatchOnline').value || null
+            };
+
+            const bookId = document.getElementById('movieBook').value;
+            if (bookId) {
+                body.book = { id: bookId };
+            }
+
+            if (!body.title || !body.director) {
+                errorBox.textContent = 'Заполните обязательные поля';
+                errorBox.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                await apiPost('/movies', body);
+                showToast('✅ Фильм добавлен!', 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            } catch (error) {
+                errorBox.textContent = 'Ошибка: ' + error.message;
+                errorBox.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

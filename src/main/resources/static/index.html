@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>КиноКнигоТЕКА — Главная</title>
+    <link rel="stylesheet" href="/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+</head>
+<body class="bg-main">
+
+    <header class="header">
+        <div class="container header-content">
+            <a href="/" class="logo">
+                <div class="logo-left">
+                    <span class="logo-knigo">Книго</span>
+                    <span class="logo-kino">Кино</span>
+                </div>
+                <span class="logo-teka">ТЕКА</span>
+            </a>
+            <nav class="nav">
+                <a href="/books.html" class="nav-link">Книги</a>
+                <a href="/movies.html" class="nav-link">Фильмы</a>
+                <a href="/admin.html" class="nav-link nav-link--accent hidden">Админ-панель</a>
+                <a href="/login.html" class="nav-link nav-link--accent" id="loginBtn">Войти</a>
+                <a href="/profile.html" class="nav-link nav-link--accent hidden" id="profileBtn">Личный кабинет</a>
+                <a href="#" class="nav-link nav-link--logout hidden" id="logoutBtn">Выйти</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="hero">
+        <div class="container">
+            <div class="hero-text">
+                <h1 class="hero-title">Добро пожаловать в мир книг и кино</h1>
+                <p class="hero-subtitle">Читайте книги, смотрите экранизации, ведите личную библиотеку и ставьте оценки.</p>
+            </div>
+
+            <div class="hero-cards">
+                <a href="/books.html" class="hero-card">
+                    <div class="hero-card-icon">📖</div>
+                    <h2 class="hero-card-title">Книги</h2>
+                    <p class="hero-card-text">Каталог книг с описанием, рейтингом и возможностью скачать.</p>
+                    <span class="hero-card-btn">Перейти →</span>
+                </a>
+
+                <a href="/movies.html" class="hero-card">
+                    <div class="hero-card-icon">🎬</div>
+                    <h2 class="hero-card-title">Фильмы</h2>
+                    <p class="hero-card-text">Экранизации книг, рейтинги и рекомендации к прочтению.</p>
+                    <span class="hero-card-btn">Перейти →</span>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 КиноКнигоТЕКА. Дипломный проект.</p>
+        </div>
+    </footer>
+
+    <script src="/app.js"></script>
+</body>
+</html>

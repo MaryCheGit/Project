@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход — Читальня</title>
+    <link rel="stylesheet" href="/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header class="header">
+        <div class="container header-content">
+            <a href="/" class="logo">
+                <span class="logo-kino">Кино</span>
+                <span class="logo-knigo">Книго</span>
+                <span class="logo-teka">ТЕКА</span>
+            </a>
+            <nav class="nav">
+                <a href="/books.html" class="nav-link">Книги</a>
+                <a href="/movies.html" class="nav-link">Фильмы</a>
+                <a href="/admin.html" class="nav-link nav-link--accent hidden">Админ-панель</a>
+                <a href="/login.html" class="nav-link nav-link--accent">Войти</a>
+                <a href="/profile.html" class="nav-link nav-link--accent hidden" id="profileBtn">Личный кабинет</a>
+                <a href="#" class="nav-link nav-link--logout hidden" id="logoutBtn">Выйти</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="auth-page">
+        <div class="auth-card fade-in">
+            <h1 class="auth-title">Вход</h1>
+            <p class="auth-subtitle">Войдите, чтобы получить доступ к личному кабинету</p>
+
+            <div id="errorBox" class="form-error hidden"></div>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label class="form-label" for="username">Имя пользователя</label>
+                    <input type="text" id="username" class="form-input" required placeholder="Введите логин">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="password">Пароль</label>
+                    <input type="password" id="password" class="form-input" required placeholder="Введите пароль">
+                </div>
+
+                <button type="submit" class="form-btn">Войти</button>
+            </form>
+
+            <p class="form-link">
+                Нет аккаунта? <a href="/register.html">Зарегистрироваться</a>
+            </p>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 Читальня и Фильмотека. Дипломный проект.</p>
+        </div>
+    </footer>
+
+    <script src="/app.js"></script>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorBox = document.getElementById('errorBox');
+
+            errorBox.classList.add('hidden');
+
+            try {
+                const response = await apiPost('/auth/login', { username, password });
+
+                saveAuth(response.token, {
+                    userId: response.userId,
+                    username: response.username,
+                    email: response.email,
+                    fullName: response.fullName,
+                    role: response.role
+                });
+
+                window.location.href = '/profile.html';
+
+            } catch (error) {
+                errorBox.textContent = 'Неверное имя пользователя или пароль';
+                errorBox.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

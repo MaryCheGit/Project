@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Каталог фильмов — КиноКнигоТЕКА</title>
+    <link rel="stylesheet" href="/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+</head>
+<body class="bg-movies">
+
+    <header class="header">
+        <div class="container header-content">
+            <a href="/" class="logo">
+                <div class="logo-left">
+                    <span class="logo-knigo">Книго</span>
+                    <span class="logo-kino">Кино</span>
+                </div>
+                <span class="logo-teka">ТЕКА</span>
+            </a>
+            <nav class="nav">
+                <a href="/books.html" class="nav-link">Книги</a>
+                <a href="/movies.html" class="nav-link nav-link--accent">Фильмы</a>
+                <a href="/admin.html" class="nav-link nav-link--accent hidden">Админ-панель</a>
+                <a href="/login.html" class="nav-link hidden" id="loginBtn">Войти</a>
+                <a href="/profile.html" class="nav-link nav-link--accent hidden" id="profileBtn">Личный кабинет</a>
+                <a href="#" class="nav-link nav-link--logout hidden" id="logoutBtn">Выйти</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <h1 class="page-title">🎬 Каталог фильмов</h1>
+
+        <div class="filters">
+            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Поиск по названию или режиссёру...">
+            <select id="categoryFilter" class="filter-select">
+                <option value="">Все категории</option>
+            </select>
+        </div>
+
+        <div id="moviesContainer" class="cards-grid">
+            <div class="loading" style="color: white;">Загрузка фильмов...</div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 КиноКнигоТЕКА. Дипломный проект.</p>
+        </div>
+    </footer>
+
+    <script src="/app.js"></script>
+    <script>
+        let allMovies = [];
+        let allCategories = [];
+
+        async function loadData() {
+            try {
+                const [movies, categories] = await Promise.all([
+                    apiGet('/movies'),
+                    apiGet('/categories')
+                ]);
+
+                allMovies = movies || [];
+                allCategories = categories || [];
+
+                renderCategories();
+                renderMovies();
+
+            } catch (error) {
+                document.getElementById('moviesContainer').innerHTML =
+                    '<div class="empty-state"><p>Ошибка загрузки фильмов</p></div>';
+            }
+        }
+
+        function renderCategories() {
+            const select = document.getElementById('categoryFilter');
+            allCategories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                option.textContent = cat.name;
+                select.appendChild(option);
+            });
+        }
+
+        function renderMovies() {
+            const container = document.getElementById('moviesContainer');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const categoryId = document.getElementById('categoryFilter').value;
+
+            let filtered = allMovies;
+
+            if (categoryId) {
+                filtered = filtered.filter(m =>
+                    m.book && m.book.category && m.book.category.id == categoryId
+                );
+            }
+
+            if (search) {
+                filtered = filtered.filter(m =>
+                    m.title.toLowerCase().includes(search) ||
+                    (m.director && m.director.toLowerCase().includes(search))
+                );
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <div class="empty-state-icon">🔍</div>
+                        <h3 class="empty-state-title">Фильмы не найдены</h3>
+                        <p>Попробуйте изменить фильтры</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(movie => {
+                const poster = movie.posterUrl
+                    ? '<img src="' + movie.posterUrl + '" alt="' + movie.title + '" onerror="imgFallback(this, \'🎬\')">'
+                    : '🎬';
+
+                return `
+                    <a href="/movie-detail.html?id=${movie.id}" class="card fade-in">
+                        <div class="card-image" style="${movie.posterUrl ? 'padding: 0;' : ''}">${poster}</div>
+                        <div class="card-body">
+                            <h3 class="card-title">${movie.title}</h3>
+                            <p class="card-subtitle">${movie.director || ''}${movie.year ? ', ' + movie.year : ''}</p>
+                            <div class="card-rating">
+                                <span>${renderStars(movie.averageRating)}</span>
+                                <span class="card-rating-count">
+                                    ${(movie.averageRating || 0).toFixed(1)} (${movie.ratingCount || 0})
+                                </span>
+                            </div>
+                        </div>
+                    </a>
+                `;
+            }).join('');
+        }
+
+        document.getElementById('searchInput').addEventListener('input', renderMovies);
+        document.getElementById('categoryFilter').addEventListener('change', renderMovies);
+
+        document.addEventListener('DOMContentLoaded', loadData);
+    </script>
+</body>
+</html>

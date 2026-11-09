@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Личный кабинет — КиноКнигоТЕКА</title>
+    <link rel="stylesheet" href="/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+</head>
+<body class="bg-profile">
+
+    <header class="header">
+        <div class="container header-content">
+            <a href="/" class="logo">
+                <div class="logo-left">
+                    <span class="logo-knigo">Книго</span>
+                    <span class="logo-kino">Кино</span>
+                </div>
+                <span class="logo-teka">ТЕКА</span>
+            </a>
+            <nav class="nav">
+                <a href="/books.html" class="nav-link">Книги</a>
+                <a href="/movies.html" class="nav-link">Фильмы</a>
+                <a href="/admin.html" class="nav-link nav-link--accent hidden">Админ-панель</a>
+                <a href="/profile.html" class="nav-link nav-link--accent">Личный кабинет</a>
+                <a href="#" class="nav-link nav-link--logout" id="logoutBtn">Выйти</a>
+            </nav>
+        </div>
+    </header>
+
+    <section class="profile-header">
+        <div class="container">
+            <h1 id="userName">Загрузка...</h1>
+            <p id="userEmail">...</p>
+        </div>
+    </section>
+
+    <main class="container">
+        <h2 class="page-title">📚 Моя библиотека</h2>
+
+        <div class="filters">
+            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Поиск...">
+            <select id="categoryFilter" class="filter-select">
+                <option value="">Все категории</option>
+            </select>
+            <select id="typeFilter" class="filter-select">
+                <option value="">Все</option>
+                <option value="book">📖 Только книги</option>
+                <option value="movie">🎬 Только фильмы</option>
+            </select>
+        </div>
+
+        <div id="libraryContainer" class="cards-grid">
+            <div class="loading" style="color: white;">Загрузка библиотеки...</div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 КиноКнигоТЕКА. Дипломный проект.</p>
+        </div>
+    </footer>
+
+    <script src="/app.js"></script>
+    <script>
+        let currentUser = null;
+        let allLibraryItems = [];
+        let allCategories = [];
+
+        async function loadProfile() {
+            if (!isAuthenticated()) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            currentUser = getCurrentUser();
+            if (currentUser) {
+                document.getElementById('userName').textContent = '👤 ' + (currentUser.fullName || currentUser.username);
+                document.getElementById('userEmail').textContent = currentUser.email || '';
+            }
+
+            try {
+                allCategories = await apiGet('/categories') || [];
+                renderCategories();
+            } catch (e) {}
+
+            await loadLibrary();
+        }
+
+        async function loadLibrary() {
+            const container = document.getElementById('libraryContainer');
+            try {
+                const items = await apiGet('/library/user/' + currentUser.userId);
+                allLibraryItems = items || [];
+                renderLibrary();
+            } catch (error) {
+                container.innerHTML = '<div class="empty-state"><p>Ошибка загрузки библиотеки</p></div>';
+            }
+        }
+
+        function renderCategories() {
+            const select = document.getElementById('categoryFilter');
+            allCategories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                option.textContent = cat.name;
+                select.appendChild(option);
+            });
+        }
+
+        function getCategoryId(item) {
+            if (item.book && item.book.category) return item.book.category.id;
+            if (item.movie && item.movie.book && item.movie.book.category) return item.movie.book.category.id;
+            return null;
+        }
+
+        function renderLibrary() {
+            const container = document.getElementById('libraryContainer');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const categoryId = document.getElementById('categoryFilter').value;
+            const typeFilter = document.getElementById('typeFilter').value;
+
+            let filtered = allLibraryItems;
+
+            if (typeFilter === 'book') {
+                filtered = filtered.filter(item => !!item.book);
+            } else if (typeFilter === 'movie') {
+                filtered = filtered.filter(item => !!item.movie);
+            }
+
+            if (categoryId) {
+                filtered = filtered.filter(item => getCategoryId(item) == categoryId);
+            }
+
+            if (search) {
+                filtered = filtered.filter(item => {
+                    const entity = item.book || item.movie;
+                    return entity.title.toLowerCase().includes(search);
+                });
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <div class="empty-state-icon">📭</div>
+                        <h3 class="empty-state-title">Библиотека пуста</h3>
+                        <p>Добавьте книги или фильмы из каталога</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(item => {
+                const isBook = !!item.book;
+                const entity = isBook ? item.book : item.movie;
+                const link = isBook ? '/book-detail.html?id=' + entity.id : '/movie-detail.html?id=' + entity.id;
+
+                const imageUrl = isBook ? entity.coverUrl : entity.posterUrl;
+                const imageHTML = imageUrl
+                    ? '<img src="' + imageUrl + '" alt="' + entity.title + '" onerror="imgFallback(this, \'' + (isBook ? '📖' : '🎬') + '\')">'
+                    : (isBook ? '📖' : '🎬');
+
+                return `
+                    <a href="${link}" class="card fade-in">
+                        <div class="card-image" style="${imageUrl ? 'padding: 0;' : ''}">${imageHTML}</div>
+                        <div class="card-body">
+                            <h3 class="card-title">${entity.title}</h3>
+                            <p class="card-subtitle">${isBook ? entity.author : entity.director}</p>
+                            <div class="card-rating">
+                                <span>${renderStars(entity.averageRating)}</span>
+                                <span class="card-rating-count">${(entity.averageRating || 0).toFixed(1)}</span>
+                            </div>
+                        </div>
+                    </a>
+                `;
+            }).join('');
+        }
+
+        document.getElementById('searchInput').addEventListener('input', renderLibrary);
+        document.getElementById('categoryFilter').addEventListener('change', renderLibrary);
+        document.getElementById('typeFilter').addEventListener('change', renderLibrary);
+
+        document.addEventListener('DOMContentLoaded', loadProfile);
+    </script>
+</body>
+</html>
